@@ -28,6 +28,19 @@ function wait_for_port {
   done
 }
 
+function wait_by_command {
+  local COMMAND=$1
+	local TIMEOUT_SECONDS=$((SECONDS + 120)) # timeout in 2 minutes
+  while ! eval ${COMMAND}; do
+    sleep 1
+    echo "Waiting for HDFS ready..."
+    if [ "${SECONDS}" -ge "${TIMEOUT_SECONDS}" ]; then
+      echo "Timeout waiting for ${COMPONENT_NAME}."
+      exit 1
+    fi
+  done
+}
+
 function sort_and_compare_files {
   local FILE1=$1
 	local FILE2=$2

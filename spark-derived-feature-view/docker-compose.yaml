@@ -1,0 +1,34 @@
+version: "2.1"
+services:
+  spark-master:
+    image: feathub-spark:latest
+    container_name: spark-master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    command:
+      - bash
+      - -c
+      - "./sbin/start-master.sh; while true; do sleep 10; done"
+
+  spark-worker:
+    image: feathub-spark:latest
+    container_name: spark-worker
+    ports:
+      - "8081:8080"
+      - "7000:7000"
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_WORKER_CORES=1
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_DRIVER_MEMORY=1G
+      - SPARK_EXECUTOR_MEMORY=500M
+    volumes:
+      - ./main.py:/tmp/main.py
+      - ./data:/tmp/spark-data
+    command:
+      - bash
+      - -c
+      - "./sbin/start-worker.sh spark://spark-master:7077; while true; do sleep 10; done"
+

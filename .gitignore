@@ -21,4 +21,5 @@ target
 
 build
 dist
+output.json
 *.egg-info

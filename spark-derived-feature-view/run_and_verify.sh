@@ -1,5 +1,5 @@
 #
-# Copyright 2022 The FeatHub Authors
+# Copyright 2022 The Feathub Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,19 +13,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+
 set -e
 
-PROJECT_DIR=$(cd "$(dirname "$0")/../.."; pwd)
+cd "$(dirname "$0")"
+PROJECT_DIR=$(cd "$(pwd)/.."; pwd)
+source "${PROJECT_DIR}"/tools/utils.sh
 
-python -m pip -q install --upgrade "feathub-nightly[flink]"
+chmod 777 data
+rm -rf data/output.json/
 
-docker build -q --rm -t feathub-flink -f ./docker/Dockerfile.flink .
+docker-compose up -d
+wait_for_port 8090 "Spark Master"
+wait_for_port 8091 "Spark Worker"
 
-docker build -q --rm -t feathub-spark -f ./docker/Dockerfile.spark ./docker
+# Run main.py in the container to avoid the communication issue between driver and cluster
+docker exec spark-worker bash -c "python3 /tmp/main.py"
 
-# Run the run_and_verify.sh script in each example folder
-for EXAMPLE_RUN_SCRIPT in "${PROJECT_DIR}"/*/run_and_verify.sh; do
-  echo "Running example ${EXAMPLE_RUN_SCRIPT}..."
-  bash "${EXAMPLE_RUN_SCRIPT}"
-  echo "Example ${EXAMPLE_RUN_SCRIPT} success."
-done
+docker-compose down
+
+cat data/output.json/* > data/merged_output
+
+sort_and_compare_files data/merged_output data/expected_output.txt

@@ -1,8 +1,7 @@
 # Overview
 
 This example shows how to use `DerivedFeatureView` to backfill the input dataset
-with extra features and sink the output to HDFS for offline training. It involves 
-the following steps:
+with extra features for offline training. It involves the following steps:
 
 1. Read a batch of historical purchase events from a file.
 
@@ -27,50 +26,45 @@ the following steps:
    - total_payment_last_two_minutes, total cost of purchases made by this
      user in a 2-minute window that ends at the time this purchase is made.
 
-4. Output the batch of purchase events backfilled with the extra features to HDFS.
+4. Output the batch of purchase events backfilled with the extra features to a
+   file.
 
-5. Re-read the purchase events from HDFS and output them to a local file.
 
 # Prerequisites
 
 Prerequisites for running this example:
 - Unix-like operating system (e.g. Linux, Mac OS X)
 - Python 3.7
+- Docker Compose >= 20.10
 
 # Step-By-Step Instructions
 
-Please execute the following commands under the `flink-read-write-hdfs`
+Please execute the following commands under the `spark-derived-feature-view`
 folder to run this example.
 
-1. Install FeatHub pip package with FlinkProcessor dependencies.
+1. Build the Spark image with Feathub installed.
 
    ```bash
-   $ python -m pip install --upgrade "feathub-nightly[flink]"
+   $ docker build --rm -t feathub-spark -f ../docker/Dockerfile.spark ../docker
    ```
-
-2. Build the Flink image to support HDFS.
-
-   ```bash
-   $ docker build --rm -t feathub-flink -f ../docker/Dockerfile.flink .
-   ```
-
-3. Start the Flink cluster and Hadoop cluster.
+2. Start the Spark cluster.
 
    ```bash
    $ docker-compose up -d
    ```
 
-   After the Flink cluster has started, you should be able to navigate to the
-   web UI at [localhost:8081](http://localhost:8081) to view the Flink dashboard.
+   After the Spark cluster has started, you should be able to navigate to the
+   web UI at [localhost:8080](http://localhost:8080) to view the Spark dashboard.
 
-4. Run the FeatHub program to compute and output the extended purchase events to
-   a file.
+3. Run the FeatHub program to compute and output the extended purchase events to a file.
+   We submit Feathub program in a docker container instead of local workstation to avoid
+   the communication issue between driver and cluster.
 
    ```bash
-   $ python main.py
+   $ docker exec spark-worker bash -c "python3 /tmp/main.py"
    ```
 
-5. Checkout the outputs.
+4. Checkout the outputs.
 
    ```bash
    $ cat data/output.json/*
@@ -79,14 +73,14 @@ folder to run this example.
    The file should contain the following rows:
 
    ```
-   user_1,item_1,1,"2022-01-01 00:00:00",100.0,100.0
-   user_1,item_2,2,"2022-01-01 00:01:00",200.0,500.0
-   user_1,item_1,3,"2022-01-01 00:02:00",200.0,1100.0
-   user_2,item_1,1,"2022-01-01 00:03:00",300.0,300.0
-   user_1,item_3,2,"2022-01-01 00:04:00",300.0,1200.0
+   user_1,item_1,1,2022-01-01 00:00:00,100.0,100.0
+   user_1,item_2,2,2022-01-01 00:01:00,200.0,500.0
+   user_1,item_1,3,2022-01-01 00:02:00,200.0,1100.0
+   user_2,item_1,1,2022-01-01 00:03:00,300.0,300.0
+   user_1,item_3,2,2022-01-01 00:04:00,300.0,1200.0
    ```
 
-6. Tear down the Flink cluster after the FeatHub program has finished.
+5. Tear down the Spark cluster after the FeatHub program has finished.
 
    ```bash
    docker-compose down
